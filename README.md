@@ -8,7 +8,7 @@ Defender for Storage's Malware Scanning feature secures storage accounts by scan
 
 A publicly accessible DMZ Storage Account is the initial landing zone, or target, for blob uploads. Defender for Storage is enabled on the DMZ Storage Account allowing Malware Scanning to scan all uploaded or modified blobs. When the scan is complete, Defender writes the scan results to a blob index tag on each individual blob. The result can either be `Malicious` or `No threats found`.
 
-Defender for Storage settings are used to stream the scan results to a custom Event Grid Topic. A Function App subscribes to the Event Grid, receives the scan results, and runs the [C# sample code](function_code.cs) which reads the scan result and moves the blob to the appropriate Storage Account (Clean or Quarantine) that is secured behind Private Endpoints.
+Defender for Storage settings are used to stream the scan results to a custom Event Grid Topic. A Function App subscribes to the Event Grid, and receives the scan results which triggers the Azure Function. The Function reads the scan result and moves the blob to the appropriate Storage Account (Clean or Quarantine) that is secured behind Private Endpoints.
 
 # Deployment
 
@@ -57,18 +57,25 @@ Follow this [how-to deployment guide](https://learn.microsoft.com/en-us/azure/ev
 
 ### Function App
 
-Create a Function App in the same resource group as the DMZ Storage Account. When deploying, specify the *Azure Event Grid trigger* template. The provided sample c# code used .NET 6.
+Create a Function App in the same Resource Group and Region as the DMZ Storage Account using the **.NET Runtime Stack version 6** on **Windows**. Select a **Functions Premium** hosting plan if you need advanced networking cnofigurations like VNet Integration or Private Endpoint ([see more in the next section](#function-app-network-configurations)). The Function App requires a Storage Account to operate. Select a Storage Account other than the DMZ Storage Account. 
+
+![functionAppcreate1](/images/functionapp-create-1.png)
 
 Resources:
 
 - [Develop Azure Functions by using Visual Studio Code](https://learn.microsoft.com/en-us/azure/azure-functions/functions-develop-vs-code?tabs=csharp)
 - [Use a function as an event handler for Event Grid events](https://learn.microsoft.com/en-us/azure/event-grid/handler-functions)
 
+#### Function App Network Configurations
 If public access to the Storage Account is blocked with the Storage Account Firewall, additional steps need to be taken to allow the Function App to access the Storage Account. There are a few options:
 
 1. If using Private Endpoints with the Storage Account, [Enable Virtual Network Integration](https://learn.microsoft.com/en-us/azure/azure-functions/functions-networking-options?tabs=azure-cli#virtual-network-integration) on the Function App. After integrating the Function App into the VNet where the Private Endpoints are deployed, it will leverage the VNet's DNS settings and linked Private DNS Zones to resolve the Storage Accounts to their Private Endpoints. This requires a Premium App Service Plan. 
 3. If using VNet whitelisting on the Storage Account Firewall, [Enable Virtual Network Integration](https://learn.microsoft.com/en-us/azure/azure-functions/functions-networking-options?tabs=azure-cli#virtual-network-integration) on the Function App. Add the Function Apps VNet/Subnet to the Storage Account VNet whitelist.
 2. If using IP whitelisting on the Storage Account Firewall, [locate the Function App public IPs](https://learn.microsoft.com/en-us/azure/azure-functions/ip-addresses?tabs=portal#find-outbound-ip-addresses) and add them to the whitelist.
+
+Example Scenario: A destination Storage Account for clean blobs will deny all public access and have a Private Endpoint deployed to a VNet called **DMZ-VNet**. The Storage Account is only accessible via the Private Endpoint. For the Function App to access the Private Endpoint, it needs to be injected into the DMZ-VNet. This can be configured at Function App creation time like the screenshot below. It can also be configured in the **Network** settings of the Function App after deployment.
+
+![functionapp-create-2.png](/images/functionapp-create-2.png)
 
 ## Permissions
 
@@ -121,16 +128,58 @@ When Defender for Storage enablement is complete, navigate to the **Storage Acco
 
 ## Deploy Code to Function App
 
-Edit the Function App code to use the [C# sample code](function_code.cs). Update two variables in the `MoveBlobEventTrigger` class with the names of the destination Storage Accounts.
+In this tutorial we will use one of two sample Function App projects. We download the sample project files, edit the storage account names to the ones deployed at the beginning of this guide, upload the edited project to our own repo, then use the Azure Portal to point our Function App to our own repo that contains the edited project. Having a github account is a prerequisite for these steps.
+
+[1. Clone the sample Function App Repo](#1-clone-the-sample-function-app-repo)<br />
+[2. Update the Storage Account Name](#2-update-the-storage-account-name)<br />
+[3. Upload edited code to your repo](#3-upload-edited-code-to-your-repo)<br />
+[4. Deploy to the Function App using the Azure Portal](#4-deploy-code-to-the-function-app-using-the-azure-portal)
+
+### 1. Clone the sample Function App Repo
+
+Choose which Function App to use and download the files:
+
+- [DmzStorageFunction-CleanOnly](https://github.com/zcabrer/DmzStorageFunction-CleanOnly): Moves scanned blobs to a destination storage account that are marked as clean. Blobs marked as malicious remain in the DMZ Storage Account. Requires two Storage Accounts - DMZ Storage Account and Clean Storage Account.
+- [DmzStorageFunction-CleanAndMalicious](https://github.com/zcabrer/DmzStorageFunction-CleanAndMalicious): Moves scanned blobs to one of two destination storage accounts depending on the scan results. Requires three Storage Accounts total - DMZ Storage Account, Clean Storage Account, and Malicious Storage Account.
+
+Download a .zip of the function by going to **Code** -> **Download ZIP**. Extract the files to a folder on your local system.
+
+![deployfunction-1](/images/deployfunction-1.png)
+
+### 2. Update the Storage Account Name
+
+Open the folder with the extracted project and open the C# file. It will be either ```DmzStorageFunction-CleanAndMalicious.cs``` or ```DmzStorageFunction-CleanOnly.cs```. Open the file in a text editor like Visual Studio Code or Notepad. Edit the Storage Account name variable/s with the name of the destination Storage Accounts. Save the file after making the edits.
+
+For example, if the Storage Account deployed for the clean blobs is **mycleanstorageaccount**, update the code:
 
 ```c#
-        private const string CleanStorageAccount = "Name of Storage Account for clean blobs";
-        private const string QuarantineStorageAccount = "Name of Storage Account for malicious blobs";
+namespace DmzStorageFunction
+{
+    public static class DmzStorageFunction_CleanOnly
+    {
+        private const string CleanStorageAccount = "mycleanstorageaccount"; <--------------------------------HERE
+        private const string AntimalwareScanEventType = "Microsoft.Security.MalwareScanningResult";
 ```
 
-[This guide](https://learn.microsoft.com/en-us/azure/azure-functions/functions-develop-vs-code?tabs=csharp) helps with developing and publishing Azure Functions using Visual Studio Code.
+### 3. Upload edited code to your repo
 
-Confirm the Function is published in the portal:
+Create a new public repo in your Github account. Upload all extracted files to the new repo (**Add file** -> **Upload files**)
+
+![deployfunction3](/images/functionapp-create-3.png)
+
+ Copy the url for your repo - like ```https://github.com/zcabrer/DmzStorageFunction```
+
+### 4. Deploy code to the Function App using the Azure Portal
+
+Now we will deploy the code to the Function App by pointing it to the repo URL copied in step 3. Navigate to the Function App in the Azure Portal and select **Deplolyment Center**. Select **External Git** from the dropdown. Enter your repo URL in **Repository** and select the branch (such as **master** or **main**). Click **Save**.
+
+![functionapp-create-4](/images/functionapp-create-4.png)
+
+It takes several minutes to deploy the code to the Function App. Navigate to the **Logs** tab to view the deployment status. The deployment should complete in 5-10 minutes then you will see success in the log.
+
+![functionapp-create-5](/images/functionapp-create-5.png)
+
+Verify the Functions is listed under **Functions**.
 
 ![confirm published function](images/deploy-function-code-confirm-deployed.png)
 
@@ -154,6 +203,6 @@ Use Function App log streaming in the [Azure Portal](https://learn.microsoft.com
 
 
 # Resources
-- The C# sample in this repo heavily leaned on [this sample C# code](https://learn.microsoft.com/en-us/azure/defender-for-cloud/defender-for-storage-configure-malware-scan#option-2-function-app-based-on-event-grid-events) from Defender for Storage Microsoft documentation and [this code from the Blob Storage SDK Documentation](https://learn.microsoft.com/en-us/azure/storage/blobs/storage-blob-copy-async-dotnet).
+- The C# sample code in linked repos heavily leans on [this sample C# code](https://learn.microsoft.com/en-us/azure/defender-for-cloud/defender-for-storage-configure-malware-scan#option-2-function-app-based-on-event-grid-events) from Defender for Storage Microsoft documentation and [this code from the Blob Storage SDK Documentation](https://learn.microsoft.com/en-us/azure/storage/blobs/storage-blob-copy-async-dotnet).
 - [Malware Scanning in Defender for Storage](https://learn.microsoft.com/en-us/azure/defender-for-cloud/defender-for-storage-malware-scan)
 - [Setting up response to Malware Scanning](https://learn.microsoft.com/en-us/azure/defender-for-cloud/defender-for-storage-configure-malware-scan)

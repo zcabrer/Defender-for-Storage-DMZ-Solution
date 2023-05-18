@@ -13,17 +13,16 @@ using System;
 using System.Text.Json;
 using System.Threading.Tasks;
 
-namespace FunctionEventTrigger
+
+namespace DmzStorageFunction
 {
-    public static class MoveBlobEventTrigger
+    public static class DmzStorageFunction_CleanOnly
     {
         private const string CleanStorageAccount = "securestoragesc";
-        private const string QuarantineStorageAccount = "quarantinestoragesc";
         private const string AntimalwareScanEventType = "Microsoft.Security.MalwareScanningResult";
-        private const string MaliciousVerdict = "Malicious";
-        private const string CleanVerdict = "No threats found";
+        private const string MaliciousVerdict = "No threats found";
 
-        [FunctionName("MoveBlobEventTrigger")]
+        [FunctionName("DmzStorageFunction_CleanOnly")]
         public static async Task RunAsync([EventGridTrigger] EventGridEvent eventGridEvent, ILogger log)
         {
             if (eventGridEvent.EventType != AntimalwareScanEventType)
@@ -47,27 +46,11 @@ namespace FunctionEventTrigger
 
             if (verdict == MaliciousVerdict)
             {
-                bool isClean = false;
-                var blobUri = new Uri(blobUriString);
-                log.LogInformation("blob {0} is malicious, moving it to Storage Account {1}", blobUri, QuarantineStorageAccount);
-                try
-                {
-                    await MoveBlobAsync(blobUri, log, isClean);
-                }
-                catch (Exception e)
-                {
-                    log.LogError(e, "Can't move blob to Storage Account '{0}'", QuarantineStorageAccount);
-                    throw;
-                }
-            }
-            if (verdict == CleanVerdict)
-            {
-                bool isClean = true;
                 var blobUri = new Uri(blobUriString);
                 log.LogInformation("blob {0} is clean, moving it to Storage Account {1}", blobUri, CleanStorageAccount);
                 try
                 {
-                    await MoveBlobAsync(blobUri, log, isClean);
+                    await MoveBlobAsync(blobUri, log);
                 }
                 catch (Exception e)
                 {
@@ -77,14 +60,12 @@ namespace FunctionEventTrigger
             }
         }
 
-        private static async Task MoveBlobAsync(Uri blobUri, ILogger log, bool isClean)
+        private static async Task MoveBlobAsync(Uri blobUri, ILogger log)
         {
-            var destStorageAccountName = isClean ? CleanStorageAccount : QuarantineStorageAccount;
-            
             DefaultAzureCredential defaultAzureCredential = new DefaultAzureCredential();
 
             BlobUriBuilder srcBlobUri = new BlobUriBuilder(blobUri);
-            BlobUriBuilder destBlobUri = new BlobUriBuilder(new Uri($"https://{destStorageAccountName}.blob.core.windows.net/{srcBlobUri.BlobContainerName}/{srcBlobUri.BlobName}"));
+            BlobUriBuilder destBlobUri = new BlobUriBuilder(new Uri($"https://{CleanStorageAccount}.blob.core.windows.net/{srcBlobUri.BlobContainerName}/{srcBlobUri.BlobName}"));
 
             BlobClient srcBlob = new BlobClient(blobUri, defaultAzureCredential);
             BlobClient destBlob = new BlobClient(destBlobUri.ToUri(), defaultAzureCredential);
