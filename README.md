@@ -169,7 +169,10 @@ Create a new public repo in your Github account. Upload the extracted files to t
 
 ![deployfunction3](/images/functionapp-create-3.png)
 
- Copy the url for your repo - like ```https://github.com/zcabrer/testrepo```
+Confirm the files are uploaded. Then copy the url for your repo - like ```https://github.com/zcabrer/testrepo```
+
+![deployfunction6](/images/functionapp-create-6.png)
+
 
 ### 4. Deploy code to the Function App using the Azure Portal
 
