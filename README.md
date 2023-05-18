@@ -137,18 +137,20 @@ In this tutorial we will use one of two sample Function App projects. We downloa
 
 ### 1. Clone the sample Function App Repo
 
-Choose which Function App to use and download the files:
+This project includes two Function App code samples:
 
-- [DmzStorageFunction-CleanOnly](https://github.com/zcabrer/DmzStorageFunction-CleanOnly): Moves scanned blobs to a destination storage account that are marked as clean. Blobs marked as malicious remain in the DMZ Storage Account. Requires two Storage Accounts - DMZ Storage Account and Clean Storage Account.
-- [DmzStorageFunction-CleanAndMalicious](https://github.com/zcabrer/DmzStorageFunction-CleanAndMalicious): Moves scanned blobs to one of two destination storage accounts depending on the scan results. Requires three Storage Accounts total - DMZ Storage Account, Clean Storage Account, and Malicious Storage Account.
+- [DmzStorageFunction-CleanOnly](https://github.com/zcabrer/Defender-for-Storage-DMZ-Solution/tree/master/DmzStorageFunction-CleanOnly): Moves scanned blobs to a destination storage account that are marked as clean. Blobs marked as malicious remain in the DMZ Storage Account. Requires two Storage Accounts - DMZ Storage Account and Clean Storage Account.
+- [DmzStorageFunction-CleanAndMalicious](https://github.com/zcabrer/Defender-for-Storage-DMZ-Solution/tree/master/DmzStorageFunction-CleanAndMalicious): Moves scanned blobs to one of two destination storage accounts depending on the scan results. Requires three Storage Accounts total - DMZ Storage Account, Clean Storage Account, and Malicious Storage Account.
 
-Download a .zip of the function by going to **Code** -> **Download ZIP**. Extract the files to a folder on your local system.
+Download a .zip of this repo by going to **Code** -> **Download ZIP**. Extract the files to a folder on your local system. Choose which of the two Function App samples to use and open that folder. 
 
 ![deployfunction-1](/images/deployfunction-1.png)
 
 ### 2. Update the Storage Account Name
 
-Open the folder with the extracted project and open the C# file. It will be either ```DmzStorageFunction-CleanAndMalicious.cs``` or ```DmzStorageFunction-CleanOnly.cs```. Open the file in a text editor like Visual Studio Code or Notepad. Edit the Storage Account name variable/s with the name of the destination Storage Accounts. Save the file after making the edits.
+Open the folder with the extracted Function App sample (either ```DmzStorageFunction-CleanOnly``` or ```DmzStorageFunction-CleanAndMalicious```) and open the C# file (the file name will be either ```DmzStorageFunction-CleanAndMalicious.cs``` or ```DmzStorageFunction-CleanOnly.cs```).
+
+Open the .cs file in a text editor like Visual Studio Code or Notepad. Edit the Storage Account name variable/s with the name of the destination Storage Accounts. Save the file after making the edits.
 
 For example, if the Storage Account deployed for the clean blobs is **mycleanstorageaccount**, update the code:
 
@@ -163,11 +165,11 @@ namespace DmzStorageFunction
 
 ### 3. Upload edited code to your repo
 
-Create a new public repo in your Github account. Upload all extracted files to the new repo (**Add file** -> **Upload files**)
+Create a new public repo in your Github account. Upload the extracted files to the new repo (**Add file** -> **Upload files**). Only upload the files in the folder for the sample you will be using (folder name either: ```DmzStorageFunction-CleanOnly``` or ```DmzStorageFunction-CleanAndMalicious```)
 
 ![deployfunction3](/images/functionapp-create-3.png)
 
- Copy the url for your repo - like ```https://github.com/zcabrer/DmzStorageFunction```
+ Copy the url for your repo - like ```https://github.com/zcabrer/testrepo```
 
 ### 4. Deploy code to the Function App using the Azure Portal
 
